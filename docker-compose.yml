@@ -7,12 +7,8 @@ services:
     restart: unless-stopped
 
   backend:
-    image: ghcr.io/yuqi1991/subconverter:latest
+    image: tindy2013/subconverter:latest
     container_name: subconverter
     ports:
       - "15051:25500"
     restart: unless-stopped
-    network_mode: host
-    # 如果需要访问宿主机的配置文件，使用 --add-host
-    # extra_hosts:
-    #   - "host.docker.internal:host-gateway"
