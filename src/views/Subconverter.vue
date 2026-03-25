@@ -491,10 +491,12 @@ export default {
         customBackend: {
           "肥羊增强型后端【vless reality+anytls】": "https://api.v1.mk",
           "肥羊备用后端【vless reality+anytls】": "https://url.v1.mk",
+          "本地公网IP后端": "http://14.153.160.145:15051",
         },
         backendOptions: [
           {value: "https://api.v1.mk"},
           {value: "https://url.v1.mk"},
+          {value: "http://14.153.160.145:15051"},
         ],
         remoteConfig: [
           {
