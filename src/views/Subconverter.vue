@@ -24,6 +24,17 @@
                     placeholder="支持各种订阅链接或单节点链接，多个链接每行一个或用 | 分隔"
                 />
               </el-form-item>
+              <el-form-item label="备用订阅:">
+                <el-input
+                    v-model="form.backupSubUrl"
+                    type="textarea"
+                    rows="2"
+                    placeholder="备用订阅链接，用于故障转移（可选）"
+                />
+              </el-form-item>
+              <el-form-item label-width="0px">
+                <el-checkbox v-model="form.enableBackup" label="启用备用订阅故障转移"></el-checkbox>
+              </el-form-item>
               <el-form-item label="生成类型:">
                 <el-select v-model="form.clientType" style="width: 100%">
                   <el-option v-for="(v, k) in options.clientTypes" :key="k" :label="k" :value="v"></el-option>
@@ -514,6 +525,10 @@ export default {
                 value: "https://raw.githubusercontent.com/WC-Dream/ACL4SSR/WD/Clash/config/ACL4SSR_Mini_Dream.ini"
               },
               {
+                label: "ACL_全分组_主备故障转移",
+                value: "https://raw.githubusercontent.com/yuqi1991/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_Fallback_v2.ini"
+              },
+              {
                 label: "emby-TikTok-流媒体分组-去广告加强版",
                 value: "https://raw.githubusercontent.com/justdoiting/ClashRule/main/GeneralClashRule.ini"
               },
@@ -882,6 +897,8 @@ export default {
       },
       form: {
         sourceSubUrl: "",
+        backupSubUrl: "",
+        enableBackup: false,
         clientType: "",
         customBackend: this.getUrlParam() == "" ? "https://api.v1.mk" : this.getUrlParam(),
         shortType: "https://v1.mk/short",
@@ -1061,6 +1078,9 @@ export default {
               ? defaultBackend
               : this.form.customBackend;
       let sourceSub = this.form.sourceSubUrl;
+      if (this.form.enableBackup && this.form.backupSubUrl) {
+        sourceSub = sourceSub + "|" + this.form.backupSubUrl;
+      }
       sourceSub = sourceSub.replace(/(\n|\r|\n\r)/g, "|");
       this.customSubUrl =
           backend +
