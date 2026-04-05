@@ -491,12 +491,10 @@ export default {
         customBackend: {
           "肥羊增强型后端【vless reality+anytls】": "https://api.v1.mk",
           "肥羊备用后端【vless reality+anytls】": "https://url.v1.mk",
-          "本地公网IP后端": "http://14.153.160.145:15051",
         },
         backendOptions: [
           {value: "https://api.v1.mk"},
           {value: "https://url.v1.mk"},
-          {value: "http://14.153.160.145:15051"},
         ],
         remoteConfig: [
           {
@@ -963,6 +961,7 @@ export default {
     this.tanchuang();
     this.form.clientType = "clash";
     this.getBackendVersion();
+    this.fetchPublicIP();
     this.anhei();
     let lightMedia = window.matchMedia('(prefers-color-scheme: light)');
     let darkMedia = window.matchMedia('(prefers-color-scheme: dark)');
@@ -1418,6 +1417,17 @@ export default {
           .finally(() => {
             this.loading2 = false;
           })
+    },
+    async fetchPublicIP() {
+      try {
+        const response = await fetch('https://api.ipify.org');
+        const ip = await response.text();
+        const localPublicBackend = `http://${ip}:15051`;
+        this.options.customBackend['本地公网IP后端'] = localPublicBackend;
+        this.options.backendOptions.push({ value: localPublicBackend });
+      } catch (error) {
+        console.error('Failed to fetch public IP:', error);
+      }
     },
     getBackendVersion() {
       this.$axios

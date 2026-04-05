@@ -19,7 +19,7 @@ services:
         container_name: sub-web-modify
         image: youshandefeiyang/sub-web-modify
 ```
-运行docker compose: `docker compose up -d`
+运行docker compose: `docker-compose up -d`
 
 访问地址举例:
 ```
