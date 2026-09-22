@@ -19,3 +19,8 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Local nested worktrees and alternate package-manager metadata
+/ACL4SSR/
+/sub-web-modify/
+/package-lock.json

@@ -4,14 +4,6 @@
       <el-col>
         <el-card>
           <div slot="header">
-            <svg-icon class="gayhub" icon-class="github" style="float:left" @click="goToProject"/>
-            <svg-icon class="dianbao" icon-class="telegram" style="float:left;margin-left: 10px"
-                      @click="gotoTgChannel"/>
-            <svg-icon class="bilibili" icon-class="bilibili" style="float:right;margin-left:10px"
-                      @click="gotoBiliBili"/>
-            <svg-icon class="youguan" icon-class="youtube" style="float:right;margin-left:10px" @click="gotoYouTuBe"/>
-            <svg-icon class="channel" icon-class="telegram" style="float:right;margin-left: 10px"
-                      @click="gotoTgChannel"/>
             <div style="text-align:center;font-size:15px">订 阅 转 换</div>
           </div>
           <el-container>
@@ -98,8 +90,22 @@
                         </el-button>
                       </el-form-item>
                     </template>
-                    <el-form-item label="自定义UA:">
-                      <el-input v-model="form.diyua" placeholder="设置后端获取订阅链接时所用的自定义User-Agent"/>
+                    <el-form-item label="订阅UA:">
+                      <el-select v-model="form.diyuaPreset" style="width: 100%" @change="syncDiyua">
+                        <el-option
+                            v-for="item in options.userAgents"
+                            :key="item.value"
+                            :label="item.label"
+                            :value="item.value"
+                        ></el-option>
+                      </el-select>
+                      <el-input
+                          v-if="form.diyuaPreset === 'custom'"
+                          v-model="form.diyuaCustom"
+                          style="margin-top: 8px"
+                          placeholder="输入自定义 User-Agent"
+                          @input="form.diyua = form.diyuaCustom"
+                      />
                     </el-form-item>
                     <el-form-item label="包含节点:">
                       <el-input v-model="form.includeRemarks" placeholder="要保留的节点，支持正则"/>
@@ -265,55 +271,11 @@
                 >从URL解析
                 </el-button>
               </el-form-item>
-              <el-form-item label-width="0px" style="text-align: center">
-                <el-button
-                    style="width: 250px;"
-                    type="success"
-                    icon="el-icon-video-play"
-                    @click="centerDialogVisible = true"
-                >视频教程
-                </el-button>
-              </el-form-item>
             </el-form>
           </el-container>
         </el-card>
       </el-col>
     </el-row>
-    <el-dialog
-        title="请选择需要观看的视频教程"
-        :visible.sync="centerDialogVisible"
-        :show-close="false"
-        width="40vh"
-        top="30vh"
-        center>
-      <div label-width="0px" style="text-align: center">
-        <el-button
-            style="width: 200px;"
-            type="primary"
-            icon="el-icon-video-play"
-            @click="gotoBasicVideo();centerDialogVisible = false"
-        >基础视频教程
-        </el-button>
-      </div>
-      <div label-width="0px" style="text-align: center;margin: 3vh 0 2vh">
-        <el-button
-            style="width: 200px;"
-            type="danger"
-            icon="el-icon-video-play"
-            @click="gotoAdvancedVideo();centerDialogVisible = false"
-        >进阶视频教程
-        </el-button>
-      </div>
-      <div label-width="0px" style="text-align: center;margin: 3vh 0 2vh">
-        <el-button
-            style="width: 200px;"
-            type="warning"
-            icon="el-icon-download"
-            @click="toolsDown"
-        >代理工具集合
-        </el-button>
-      </div>
-    </el-dialog>
     <el-dialog
         :visible.sync="dialogUploadConfigVisible"
         :show-close="false"
@@ -435,7 +397,6 @@
   </div>
 </template>
 <script>
-const project = process.env.VUE_APP_PROJECT
 const configScriptBackend = process.env.VUE_APP_CONFIG_UPLOAD_BACKEND + '/api.php'
 const remoteConfigSample = process.env.VUE_APP_SUBCONVERTER_REMOTE_CONFIG
 const scriptConfigSample = process.env.VUE_APP_SCRIPT_CONFIG
@@ -443,20 +404,21 @@ const filterConfigSample = process.env.VUE_APP_FILTER_CONFIG
 const defaultBackend = process.env.VUE_APP_SUBCONVERTER_DEFAULT_BACKEND
 const shortUrlBackend = process.env.VUE_APP_MYURLS_DEFAULT_BACKEND + '/short'
 const configUploadBackend = process.env.VUE_APP_CONFIG_UPLOAD_BACKEND + '/sub.php'
-const basicVideo = process.env.VUE_APP_BASIC_VIDEO
-const advancedVideo = process.env.VUE_APP_ADVANCED_VIDEO
-const tgBotLink = process.env.VUE_APP_BOT_LINK
-const yglink = process.env.VUE_APP_YOUTUBE_LINK
-const bzlink = process.env.VUE_APP_BILIBILI_LINK
-const downld = 'http://' + window.location.host + '/download.html'
+const backupRemoteConfig = 'config/ACL4SSR_Online_Full_Fallback_v2.ini'
+function isHttpUrl(value) {
+  try {
+    const url = new URL(value);
+    return (url.protocol === 'https:' || url.protocol === 'http:') && Boolean(url.hostname) && !url.username && !url.password;
+  } catch (error) {
+    return false;
+  }
+}
 export default {
   data() {
     return {
       backendVersion: "",
-      centerDialogVisible: false,
       activeName: 'first',
       // 是否为 PC 端
-      isPC: true,
       btnBoolean: false,
       options: {
         clientTypes: {
@@ -481,6 +443,15 @@ export default {
           ShadowsocksD: "ssd",
           "自动判断客户端": "auto",
         },
+        userAgents: [
+          { label: "Clash Meta（推荐）", value: "clash.meta" },
+          { label: "Mihomo", value: "mihomo" },
+          { label: "Shadowrocket", value: "ShadowRocket" },
+          { label: "Surge", value: "Surge" },
+          { label: "sing-box", value: "sing-box" },
+          { label: "V2RayN", value: "v2rayN" },
+          { label: "自定义", value: "custom" },
+        ],
         shortTypes: {
           "v1.mk": "https://v1.mk/short",
           "d1.mk": "https://d1.mk/short",
@@ -489,13 +460,10 @@ export default {
           "sub.cm": "https://sub.cm/short",
         },
         customBackend: {
-          "肥羊增强型后端【vless reality+anytls】": "https://api.v1.mk",
-          "肥羊备用后端【vless reality+anytls】": "https://url.v1.mk",
+          "本地后端": "http://127.0.0.1:25500",
+          "默认后端": "https://api.v1.mk",
+          "备用后端": "https://url.v1.mk",
         },
-        backendOptions: [
-          {value: "https://api.v1.mk"},
-          {value: "https://url.v1.mk"},
-        ],
         remoteConfig: [
           {
             label: "通用",
@@ -526,7 +494,7 @@ export default {
               },
               {
                 label: "ACL_全分组_主备故障转移",
-                value: "https://raw.githubusercontent.com/yuqi1991/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_Fallback_v2.ini"
+                value: "config/ACL4SSR_Online_Full_Fallback_v2.ini"
               },
               {
                 label: "emby-TikTok-流媒体分组-去广告加强版",
@@ -900,16 +868,18 @@ export default {
         backupSubUrl: "",
         enableBackup: false,
         clientType: "",
-        customBackend: this.getUrlParam() == "" ? "https://api.v1.mk" : this.getUrlParam(),
+        customBackend: "https://api.v1.mk",
         shortType: "https://v1.mk/short",
         remoteConfig: "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_NoAuto.ini",
-        excludeRemarks: "",
+        excludeRemarks: "邮箱|客服|官网|AI|订阅|电报|流量|套餐",
         includeRemarks: "",
         filename: "",
         rename: "",
         devid: "",
         interval: "",
-        diyua: "ShadowRocket",
+        diyua: "clash.meta",
+        diyuaPreset: "clash.meta",
+        diyuaCustom: "",
         emoji: true,
         nodeList: false,
         extraset: false,
@@ -947,7 +917,6 @@ export default {
       uploadFilter: "",
       uploadScript: "",
       uploadConfig: "",
-      myBot: tgBotLink,
       filterConfig: filterConfigSample,
       scriptConfig: scriptConfigSample,
       sampleConfig: remoteConfigSample
@@ -955,13 +924,21 @@ export default {
   },
   created() {
     document.title = "在线订阅转换工具";
-    this.isPC = this.$getOS().isPc;
   },
   mounted() {
-    this.tanchuang();
     this.form.clientType = "clash";
     this.getBackendVersion();
-    this.fetchPublicIP();
+    const requestedBackend = new URLSearchParams(window.location.search).get('backend');
+    if (requestedBackend && isHttpUrl(requestedBackend) && requestedBackend !== this.form.customBackend) {
+      this.$confirm(`此页面请求使用第三方后端 ${requestedBackend}。订阅链接将发送到该服务，是否继续？`, '确认后端地址', {
+        confirmButtonText: '使用',
+        cancelButtonText: '保持默认',
+        type: 'warning'
+      }).then(() => {
+        this.form.customBackend = requestedBackend;
+        this.getBackendVersion();
+      }).catch(() => {});
+    }
     this.anhei();
     let lightMedia = window.matchMedia('(prefers-color-scheme: light)');
     let darkMedia = window.matchMedia('(prefers-color-scheme: dark)');
@@ -978,17 +955,6 @@ export default {
   methods: {
     selectChanged() {
       this.getBackendVersion();
-    },
-    getUrlParam() {
-      let query = window.location.search.substring(1);
-      let vars = query.split('&');
-      for (let i = 0; i < vars.length; i++) {
-        var pair = vars[i].split('=');
-        if (pair[0] == "backend") {
-          return decodeURIComponent(pair[1]);
-        }
-      }
-      return "";
     },
     anhei() {
       const getLocalTheme = window.localStorage.getItem("localTheme");
@@ -1022,52 +988,15 @@ export default {
         window.localStorage.setItem('localTheme', 'light-mode');
       }
     },
-    tanchuang() {
-      this.$alert(`<div style="text-align:center;font-size:15px"><strong><span style="font-size:20px">本站官方TG交流群：</span><span><a href="https://t.me/feiyangdigital" target="_blank" style="color:red;font-size:20px;text-decoration:none">点击加入</a></span></strong></br><strong><span style="font-size:20px">IEPL高端机场（<span style="color:blue">原生支持奈飞非自制剧、Disney Plus、HBO等各种流媒体，支持Chat-GPT和ISP住宅IP助力Tiktok等跨境贸易使用</span>）：</span><span><a href="https://www.mcwy.org" style="color:red;font-size:20px;text-decoration:none">点击注册</a></span></strong></br><strong><span style="font-size:20px">奈飞、ChatGPT合租（<span style="color:blue">优惠码：feiyang</span>）：</span><span><a href="https://hezu.v1.mk/" style="color:red;font-size:20px;text-decoration:none">点击上车</a></span></strong></br><strong><span style="font-size:20px">115蓝光4K原盘内部资源群：</span><span><a href="https://readme.115vip.shop/" target="_blank" style="color:red;font-size:20px;text-decoration:none">点击查看</a></span></strong></br>本站服务器赞助机场-牧场物语，是一家拥有BGP中继+IEPL企业级内网专线的高端机场，适合各个价位要求的用户，<strong>采用最新Vless Encryption量子加密协议，在众多机场不稳定的今天，依旧生龙活虎，Vless Encryption量子加密协议+企业级跨境专线，是当下恶劣环境的最优解</strong>，牧场物语采用最新的奈飞非自制剧解决方案，出口随机更换IP，确保尽可能的每个用户可以用上独立IP，以此来稳定解决奈飞非自制剧的封锁，并推出7*24小时奈飞非自制剧节点自动检测系统，用户再也不用自己手动一个个的乱试节点了，目前牧场的新加坡，台湾等节区域点均可做到24H稳定非自制剧观看，支持Chat-GPT和ISP住宅IP助力Tiktok等跨境贸易使用！</br></div>`, '信息面板', {
-        confirmButtonText: '确定',
-        dangerouslyUseHTMLString: true,
-        customClass: 'msgbox'
-      });
-    },
     onCopy() {
       this.$message.success("已复制");
     },
-    goToProject() {
-      window.open(project);
-    },
-    gotoTgChannel() {
-      window.open(tgBotLink);
-    },
-    gotoBiliBili() {
-      window.open(bzlink);
-    },
-    gotoYouTuBe() {
-      window.open(yglink);
-    },
-    toolsDown() {
-      window.open(downld);
-    },
-    gotoBasicVideo() {
-      this.$alert("别忘了关注友善的肥羊哦！", {
-        type: "warning",
-        confirmButtonText: '确定',
-        customClass: 'msgbox',
-        showClose: false,
-      })
-          .then(() => {
-            window.open(basicVideo);
-          });
-    },
-    gotoAdvancedVideo() {
-      this.$alert("别忘了关注友善的肥羊哦！", {
-        type: "warning",
-        confirmButtonText: '确定',
-        customClass: 'msgbox',
-        showClose: false,
-      })
-          .then(() => {
-            window.open(advancedVideo);
-          });
+    syncDiyua() {
+      if (this.form.diyuaPreset !== "custom") {
+        this.form.diyua = this.form.diyuaPreset;
+      } else {
+        this.form.diyua = this.form.diyuaCustom;
+      }
     },
     makeUrl() {
       if (this.form.sourceSubUrl === "" || this.form.clientType === "") {
@@ -1078,11 +1007,16 @@ export default {
           this.form.customBackend === ""
               ? defaultBackend
               : this.form.customBackend;
-      let sourceSub = this.form.sourceSubUrl;
-      if (this.form.enableBackup && this.form.backupSubUrl) {
-        sourceSub = sourceSub + "|" + this.form.backupSubUrl;
+      if (!isHttpUrl(backend)) {
+        this.$message.error("后端地址必须是有效的 HTTP(S) URL");
+        return false;
       }
+      const backupEnabled = this.form.enableBackup && this.form.backupSubUrl.trim() !== "";
+      let sourceSub = this.form.sourceSubUrl;
       sourceSub = sourceSub.replace(/(\n|\r|\n\r)/g, "|");
+      // The regular ACL config treats all subscription groups as one pool. Use
+      // the dedicated GROUPID/fallback config whenever backup failover is on.
+      const remoteConfig = backupEnabled ? backupRemoteConfig : this.form.remoteConfig;
       this.customSubUrl =
           backend +
           "/sub?target=" +
@@ -1091,9 +1025,13 @@ export default {
           encodeURIComponent(sourceSub) +
           "&insert=" +
           this.form.insert;
-      if (this.form.remoteConfig !== "") {
+      if (remoteConfig !== "") {
         this.customSubUrl +=
-            "&config=" + encodeURIComponent(this.form.remoteConfig);
+            "&config=" + encodeURIComponent(remoteConfig);
+      }
+      if (backupEnabled) {
+        const backupSub = this.form.backupSubUrl.replace(/(\n|\r|\n\r)/g, "|");
+        this.customSubUrl += "&backup_url=" + encodeURIComponent(backupSub);
       }
       if (this.form.excludeRemarks !== "") {
         this.customSubUrl +=
@@ -1176,6 +1114,10 @@ export default {
           this.form.shortType === ""
               ? shortUrlBackend
               : this.form.shortType;
+      if (!isHttpUrl(duan)) {
+        this.$message.error("短链服务地址必须是有效的 HTTP(S) URL");
+        return;
+      }
       this.loading1 = true;
       let data = new FormData();
       data.append("longUrl", this.$btoa(this.customSubUrl));
@@ -1234,7 +1176,7 @@ export default {
           });
     },
     analyzeUrl() {
-      if (this.loadConfig.indexOf("target") !== -1) {
+      if (new URL(this.loadConfig).searchParams.has('target')) {
         return this.loadConfig;
       } else {
         this.loading3 = true;
@@ -1254,7 +1196,7 @@ export default {
       }
     },
     confirmLoadConfig() {
-      if (this.loadConfig.trim() === "" || !this.loadConfig.trim().includes("http")) {
+      if (!isHttpUrl(this.loadConfig.trim())) {
         this.$message.error("待解析的订阅链接不合法");
         return false;
       }
@@ -1283,6 +1225,10 @@ export default {
         }
         if (param.get("url")) {
           this.form.sourceSubUrl = param.get("url");
+        }
+        if (param.get("backup_url")) {
+          this.form.backupSubUrl = param.get("backup_url");
+          this.form.enableBackup = true;
         }
         if (param.get("insert")) {
           this.form.insert = param.get("insert") === 'true';
@@ -1354,7 +1300,16 @@ export default {
           this.form.tpl.singbox.ipv6 = param.get("singbox.ipv6") === '1';
         }
         if (param.get("diyua")) {
-          this.form.diyua = param.get("diyua");
+          const diyua = param.get("diyua");
+          const knownUa = this.options.userAgents.some(item => item.value === diyua);
+          if (knownUa) {
+            this.form.diyuaPreset = diyua;
+            this.form.diyua = diyua;
+          } else {
+            this.form.diyuaPreset = "custom";
+            this.form.diyuaCustom = diyua;
+            this.form.diyua = diyua;
+          }
         }
         this.dialogLoadConfigVisible = false;
         this.$message.success("长/短链接已成功解析为订阅信息");
@@ -1418,18 +1373,11 @@ export default {
             this.loading2 = false;
           })
     },
-    async fetchPublicIP() {
-      try {
-        const response = await fetch('https://api.ipify.org');
-        const ip = await response.text();
-        const localPublicBackend = `http://${ip}:15051`;
-        this.options.customBackend['本地公网IP后端'] = localPublicBackend;
-        this.options.backendOptions.push({ value: localPublicBackend });
-      } catch (error) {
-        console.error('Failed to fetch public IP:', error);
-      }
-    },
     getBackendVersion() {
+      if (!isHttpUrl(this.form.customBackend)) {
+        this.$message.error("后端地址必须是有效的 HTTP(S) URL");
+        return;
+      }
       this.$axios
           .get(
               this.form.customBackend + "/version"
@@ -1437,9 +1385,7 @@ export default {
           .then(res => {
             this.backendVersion = res.data.replace(/backend\n$/gm, "");
             this.backendVersion = this.backendVersion.replace("subconverter", "SubConverter");
-            let a = this.form.customBackend.indexOf("api.v1.mk") !== -1 || this.form.customBackend.indexOf("url.v1.mk") !== -1;
-            let b = this.form.customBackend.indexOf("127.0.0.1") !== -1;
-            a ? this.$message.success(`${this.backendVersion}` + "肥羊负载均衡增强版后端，已屏蔽免费节点池（会返回403），额外支持Vless Reality+AnyTLS+TUIC+Mieru订阅转换") : b ? this.$message.success(`${this.backendVersion}` + "本地局域网自建版后端") : this.$message.success(`${this.backendVersion}` + "官方原版后端不支持vless/hysteria订阅转换");
+            this.$message.success(`${this.backendVersion} 后端连接正常`);
           })
           .catch(() => {
             this.$message.error("请求SubConverter版本号返回数据失败，该后端不可用！");
