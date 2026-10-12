@@ -404,7 +404,7 @@ const filterConfigSample = process.env.VUE_APP_FILTER_CONFIG
 const defaultBackend = process.env.VUE_APP_SUBCONVERTER_DEFAULT_BACKEND
 const shortUrlBackend = process.env.VUE_APP_MYURLS_DEFAULT_BACKEND + '/short'
 const configUploadBackend = process.env.VUE_APP_CONFIG_UPLOAD_BACKEND + '/sub.php'
-const backupRemoteConfig = 'config/ACL4SSR_Online_Full_Fallback_v2.ini'
+const backupRemoteConfig = 'https://raw.githubusercontent.com/yuqi1991/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_Fallback_v2.ini'
 function isHttpUrl(value) {
   try {
     const url = new URL(value);
@@ -494,7 +494,7 @@ export default {
               },
               {
                 label: "ACL_全分组_主备故障转移",
-                value: "config/ACL4SSR_Online_Full_Fallback_v2.ini"
+                value: "https://raw.githubusercontent.com/yuqi1991/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full_Fallback_v2.ini"
               },
               {
                 label: "emby-TikTok-流媒体分组-去广告加强版",
